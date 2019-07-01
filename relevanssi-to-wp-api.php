@@ -212,10 +212,11 @@ class RelevanssiToWPAPI {
   
         return $this->response( [
           "success" => true,
-          "posts"   => $posts,
-          "_paging" => [
-            "results" => $wpQuery->found_posts,
-            "pages"   => $wpQuery->max_num_pages
+          "results" => $posts,
+          "meta"    => [
+            "results"  => $wpQuery->found_posts,
+            "pages"    => $wpQuery->max_num_pages,
+            "per_page" => $arguments[ "posts_per_page" ]
           ]
         ] );
       } else {
