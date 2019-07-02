@@ -4,10 +4,12 @@
  * Description: Creates a custom endpoint in WP REST API for making relevanssi search queries
  * Author: Renan Batel
  * Author URI: https://github.com/renanbatel
- * Version: 1.0.0
+ * Version: 1.1.0
  */
 
 class RelevanssiToWPAPI {
+
+  const API_NAMESPACE = "relevanssi/v1";
 
   /**
 	 * Constructor
@@ -32,7 +34,7 @@ class RelevanssiToWPAPI {
 	 */
   public function register() {
 
-    register_rest_route( "relevanssi/v1", "search", [
+    register_rest_route( self::API_NAMESPACE, "search", [
       "methods"  => WP_REST_Server::READABLE,
       "callback" => [ $this, "searchCallback" ],
     ] );
@@ -53,6 +55,42 @@ class RelevanssiToWPAPI {
   public function response( $body, $status = 200 ) {
 
     return new WP_REST_Response( $body, $status );
+  }
+
+  /**
+   * Creates next or previous request urls
+   * 
+   * @author Renan Batel <renanbatel@gmail.com>
+   * 
+   * @param array $arguments The query arguments
+   * @param array $parameters The request parameters
+   * @param string $type If it's next or previous link
+   * 
+   * @return string The request url
+   * 
+   * @since 1.1.0
+   */
+  public function getSearchRequestUrl( $arguments, $parameters, $type = "next" ) {
+    $baseUrl = get_rest_url( null, self::API_NAMESPACE . "/search" );
+    $query   = [
+      "posts_per_page" => $arguments[ "posts_per_page" ],
+      "paged"          => $type === "previous" ? intval( $arguments[ "paged" ] ) - 1 : intval( $arguments[ "paged" ] ) + 1,
+      "s"              => $arguments[ "s" ],
+    ];
+
+    if ( isset( $parameters[ "post_type" ] ) && $parameters[ "post_type" ] ) {
+      $query[ "post_type" ] = $parameters[ "post_type" ];
+    }
+    if ( isset( $parameters[ "category_name" ] ) && $parameters[ "category_name" ] ) {
+      $query[ "category_name" ] = $parameters[ "category_name" ];
+    }
+    if ( isset( $parameters[ "fields" ] ) && $parameters[ "fields" ] ) {
+      $query[ "fields" ] = $parameters[ "fields" ];
+    }
+
+    $queryString = build_query( $query );
+
+    return "{$baseUrl}?{$queryString}";
   }
 
   /**
@@ -209,16 +247,24 @@ class RelevanssiToWPAPI {
 
           return $this->preparePostForResponse( $post, $parameters );
         }, $wpQuery->posts );
-  
-        return $this->response( [
+        $response = [
           "success" => true,
           "results" => $posts,
           "meta"    => [
-            "results"  => $wpQuery->found_posts,
+            "total"    => $wpQuery->found_posts,
             "pages"    => $wpQuery->max_num_pages,
             "per_page" => $arguments[ "posts_per_page" ]
           ]
-        ] );
+        ];
+
+        if ( intval( $arguments[ "paged" ] ) < $wpQuery->max_num_pages ) {
+          $response[ "meta" ][ "next" ] = $this->getSearchRequestUrl( $arguments, $parameters, "next" );
+        }
+        if ( intval( $arguments[ "paged" ] ) > 1 ) {
+          $response[ "meta" ][ "previous" ] = $this->getSearchRequestUrl( $arguments, $parameters, "previous" );
+        }
+  
+        return $this->response( $response );
       } else {
 
         return $this->response( [
