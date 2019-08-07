@@ -4,7 +4,7 @@
  * Description: Creates a custom endpoint in WP REST API for making relevanssi search queries
  * Author: Renan Batel
  * Author URI: https://github.com/renanbatel
- * Version: 1.1.0
+ * Version: 1.2.0
  */
 
 class RelevanssiToWPAPI {
@@ -143,6 +143,34 @@ class RelevanssiToWPAPI {
   }
 
   /**
+   * Get post taxonomies
+   * 
+   * @author Renan Batel <renanbatel@gmail.com>
+   * 
+   * @param stdClass $post The post
+   * 
+   * @return array The post taxonomies
+   * 
+   * @since 1.2.0
+   */
+
+  public function getPostTaxonomies( $post ) {
+
+    return array_reduce( get_post_taxonomies( $post ), function( $carry, $taxonomy ) use ( $post ) {
+      $terms = wp_get_post_terms( $post->ID, $taxonomy );
+      $carry[ $taxonomy ] = array_map( function( $term ) use ( $taxonomy ) {
+        if ( $term->parent != 0 ) {
+          $term->parent = get_term( $term->parent, $taxonomy );
+        }
+
+        return $term;
+      }, $terms );
+
+      return $carry;
+    }, [] );
+  }
+
+  /**
 	 * Prepare the post for response
 	 *
 	 * @author Renan Batel <renanbatel@gmail.com>
@@ -173,16 +201,21 @@ class RelevanssiToWPAPI {
       "excerpt",
       "date",
       "modified",
+      "taxonomies",
     ];
     $fields = isset( $parameters[ "fields" ] ) && $parameters[ "fields" ]
       ? $this->prepareArgument( $parameters[ "fields" ], "fields" )
       : $default;
 
     return array_reduce( $fields, function( $carry, $field ) use ( $post, $fieldKeys ) {
-      if ( isset( $fieldKeys[ $field ] ) ) {
-        $key = $fieldKeys[ $field ];
-
-        $carry[ $field ] = $post->{ $key };
+      if ( $field === "taxonomies" ) {
+        $carry[ $field ] = $this->getPostTaxonomies( $post );
+      } else {
+        if ( isset( $fieldKeys[ $field ] ) ) {
+          $key = $fieldKeys[ $field ];
+  
+          $carry[ $field ] = $post->{ $key };
+        }
       }
 
       return $carry;
@@ -251,9 +284,11 @@ class RelevanssiToWPAPI {
           "success" => true,
           "results" => $posts,
           "meta"    => [
-            "total"    => $wpQuery->found_posts,
-            "pages"    => $wpQuery->max_num_pages,
-            "per_page" => $arguments[ "posts_per_page" ]
+            "total"        => $wpQuery->found_posts,
+            "pages"        => $wpQuery->max_num_pages,
+            "current_page" => $arguments[ "paged" ],
+            "per_page"     => $arguments[ "posts_per_page" ],
+            "s"            => $arguments[ "s" ],
           ]
         ];
 
@@ -266,7 +301,7 @@ class RelevanssiToWPAPI {
   
         return $this->response( $response );
       } else {
-
+        
         return $this->response( [
           "error"   => true,
           "message" => "Nothing found"
