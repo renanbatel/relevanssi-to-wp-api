@@ -284,6 +284,7 @@ class RelevanssiToWPAPI {
           "success" => true,
           "results" => $posts,
           "meta"    => [
+            "filters"      => [],
             "total"        => $wpQuery->found_posts,
             "pages"        => $wpQuery->max_num_pages,
             "current_page" => $arguments[ "paged" ],
@@ -292,6 +293,9 @@ class RelevanssiToWPAPI {
           ]
         ];
 
+        if ( isset( $arguments[ "category_name" ] ) ) {
+          $response[ "meta" ][ "filters" ][ "category" ] = $arguments[ "category_name" ];
+        }
         if ( intval( $arguments[ "paged" ] ) < $wpQuery->max_num_pages ) {
           $response[ "meta" ][ "next" ] = $this->getSearchRequestUrl( $arguments, $parameters, "next" );
         }
