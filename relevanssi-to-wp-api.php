@@ -81,8 +81,8 @@ class RelevanssiToWPAPI {
     if ( isset( $parameters[ "post_type" ] ) && $parameters[ "post_type" ] ) {
       $query[ "post_type" ] = $parameters[ "post_type" ];
     }
-    if ( isset( $parameters[ "category_name" ] ) && $parameters[ "category_name" ] ) {
-      $query[ "category_name" ] = $parameters[ "category_name" ];
+    if ( isset( $parameters[ "category" ] ) && $parameters[ "category" ] ) {
+      $query[ "category" ] = $parameters[ "category" ];
     }
     if ( isset( $parameters[ "fields" ] ) && $parameters[ "fields" ] ) {
       $query[ "fields" ] = $parameters[ "fields" ];
@@ -248,8 +248,18 @@ class RelevanssiToWPAPI {
     ];
     
     // optional parameters
-    if ( isset( $parameters[ "category_name" ] ) && $parameters[ "category_name" ] ) {
-      $arguments[ "category_name" ] = $parameters[ "category_name" ];
+    if ( isset( $parameters[ "category" ] ) && $parameters[ "category" ] ) {
+      $arguments[ "tax_query" ] = [
+        [
+          "taxonomy" => "category",
+          "field"    => "slug",
+          "terms"    => $parameters[ "category" ]
+        ]
+      ];
+
+      if ( isset( $parameters[ "taxonomy" ] ) && $parameters[ "taxonomy" ] ) {
+        $arguments[ "tax_query" ][ 0 ][ "taxonomy" ] = $parameters[ "taxonomy" ];
+      }
     }
 
     return $arguments;
@@ -293,8 +303,9 @@ class RelevanssiToWPAPI {
           ]
         ];
 
-        if ( isset( $arguments[ "category_name" ] ) ) {
-          $response[ "meta" ][ "filters" ][ "category" ] = $arguments[ "category_name" ];
+        if ( isset( $arguments[ "tax_query" ] ) ) {
+          $response[ "meta" ][ "filters" ][ "category" ] = $arguments[ "tax_query" ][ 0 ][ "terms" ];
+          $response[ "meta" ][ "filters" ][ "taxonomy" ] = $arguments[ "tax_query" ][ 0 ][ "taxonomy" ];
         }
         if ( intval( $arguments[ "paged" ] ) < $wpQuery->max_num_pages ) {
           $response[ "meta" ][ "next" ] = $this->getSearchRequestUrl( $arguments, $parameters, "next" );
