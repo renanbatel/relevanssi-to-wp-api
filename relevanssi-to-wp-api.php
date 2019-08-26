@@ -294,7 +294,7 @@ class RelevanssiToWPAPI {
           "success" => true,
           "results" => $posts,
           "meta"    => [
-            "filters"      => [],
+            "filter"       => [],
             "total"        => $wpQuery->found_posts,
             "pages"        => $wpQuery->max_num_pages,
             "current_page" => $arguments[ "paged" ],
@@ -304,8 +304,8 @@ class RelevanssiToWPAPI {
         ];
 
         if ( isset( $arguments[ "tax_query" ] ) ) {
-          $response[ "meta" ][ "filters" ][ "category" ] = $arguments[ "tax_query" ][ 0 ][ "terms" ];
-          $response[ "meta" ][ "filters" ][ "taxonomy" ] = $arguments[ "tax_query" ][ 0 ][ "taxonomy" ];
+          $response[ "meta" ][ "filter" ][ "category" ] = $arguments[ "tax_query" ][ 0 ][ "terms" ];
+          $response[ "meta" ][ "filter" ][ "taxonomy" ] = $arguments[ "tax_query" ][ 0 ][ "taxonomy" ];
         }
         if ( intval( $arguments[ "paged" ] ) < $wpQuery->max_num_pages ) {
           $response[ "meta" ][ "next" ] = $this->getSearchRequestUrl( $arguments, $parameters, "next" );
