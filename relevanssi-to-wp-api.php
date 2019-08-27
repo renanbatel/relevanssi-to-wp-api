@@ -72,20 +72,22 @@ class RelevanssiToWPAPI {
    */
   public function getSearchRequestUrl( $arguments, $parameters, $type = "next" ) {
     $baseUrl = get_rest_url( null, self::API_NAMESPACE . "/search" );
+    $fields = [
+      "post_type",
+      "category",
+      "taxonomy",
+      "fields"
+    ];
     $query   = [
       "posts_per_page" => $arguments[ "posts_per_page" ],
       "paged"          => $type === "previous" ? intval( $arguments[ "paged" ] ) - 1 : intval( $arguments[ "paged" ] ) + 1,
       "s"              => $arguments[ "s" ],
     ];
 
-    if ( isset( $parameters[ "post_type" ] ) && $parameters[ "post_type" ] ) {
-      $query[ "post_type" ] = $parameters[ "post_type" ];
-    }
-    if ( isset( $parameters[ "category" ] ) && $parameters[ "category" ] ) {
-      $query[ "category" ] = $parameters[ "category" ];
-    }
-    if ( isset( $parameters[ "fields" ] ) && $parameters[ "fields" ] ) {
-      $query[ "fields" ] = $parameters[ "fields" ];
+    foreach ( $fields as $field ) {
+      if ( isset( $parameters[ $field ] ) && $parameters[ $field ] ) {
+        $query[ $field ] = $parameters[ $field ];
+      }
     }
 
     $queryString = build_query( $query );
@@ -282,7 +284,7 @@ class RelevanssiToWPAPI {
 
     if ( $arguments[ "s" ] ) {
       $wpQuery = new WP_Query( $arguments );
-
+      
       relevanssi_do_query( $wpQuery );
 
       if ( !empty( $wpQuery->posts ) ) {
